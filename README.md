@@ -1,8 +1,6 @@
 # Personal LLM setup
 
-[darwin67/llm-setup](https://github.com/darwin67/llm-setup) is the source of truth
-for darwin67's personal LLM configuration. The LLC's chaba workspace setup stays
-in [chaba-dev/llm-setup](https://github.com/chaba-dev/llm-setup).
+Personal LLM setup, skills, and configuration used across tools.
 
 The layout is unchanged:
 
