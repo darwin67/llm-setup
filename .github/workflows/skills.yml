@@ -1,0 +1,74 @@
+name: Validate setup and publish Amp packages
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@2126ae7fc54c9df00dd18f7f18754393182c73cd # v31.9.1
+      - name: Validate guidance, prompts, skills, plugins, and sync tools
+        run: |
+          nix develop --command python scripts/sync_repositories.py --check
+          nix develop --command python scripts/sync_amp.py --check
+          nix develop --command python -m unittest discover -s tests -v
+          nix develop --command bun test amp/user/plugins
+          nix develop --command actionlint
+
+  publish:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scope: user
+            kind: skills
+            repository: darwin67/-/skills
+          - scope: user
+            kind: plugins
+            repository: darwin67/-/plugins
+    concurrency:
+      group: amp-${{ matrix.scope }}-${{ matrix.kind }}-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: cachix/install-nix-action@2126ae7fc54c9df00dd18f7f18754393182c73cd # v31.9.1
+      - name: Publish scoped Amp repository
+        env:
+          AMP_API_KEY: ${{ secrets.AMP_API_KEY }}
+          SYNC_SCOPE: ${{ matrix.scope }}
+          SYNC_KIND: ${{ matrix.kind }}
+          SYNC_REPOSITORY: ${{ matrix.repository }}
+        run: |
+          if [ -z "$AMP_API_KEY" ]; then
+            echo "Add AMP_API_KEY with an Amp access token that can write $SYNC_REPOSITORY." >&2
+            exit 1
+          fi
+          nix develop --command bash -euo pipefail <<'BASH'
+          target="$RUNNER_TEMP/amp-repository"
+          amp clone "$SYNC_REPOSITORY" "$target"
+          python scripts/sync_repositories.py --scope "$SYNC_SCOPE" --kind "$SYNC_KIND" --target "$target"
+          git -C "$target" add -A
+          if git -C "$target" diff --cached --quiet; then
+            echo 'Nothing to publish'
+            exit 0
+          fi
+          git -C "$target" config user.name 'llm-setup publisher'
+          git -C "$target" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C "$target" commit -m "Sync $SYNC_SCOPE $SYNC_KIND from darwin67/llm-setup@${GITHUB_SHA:0:12}"
+          git -C "$target" push origin HEAD:main
+          BASH

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+# Latest stable upstream release, verified at https://nixos.org/download/.
+nix_version=2.35.4
+started=$SECONDS
+echo "Preparing llm-setup with upstream Nix $nix_version"
+
+if [[ ! -x "$HOME/.nix-profile/bin/nix" ]]; then
+  installer="$(mktemp)"
+  trap 'rm -f -- "$installer"' EXIT
+  curl --proto '=https' --tlsv1.2 -fsSL \
+    "https://releases.nixos.org/nix/nix-$nix_version/install" -o "$installer"
+  sh "$installer" --no-daemon --yes --no-channel-add --no-modify-profile
+fi
+
+export PATH="$HOME/.nix-profile/bin:$PATH"
+export NIX_CONFIG="${NIX_CONFIG:-}
+extra-experimental-features = nix-command flakes"
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/nix"
+mkdir -p "$config_dir"
+features='extra-experimental-features = nix-command flakes'
+if ! grep -Fqx "$features" "$config_dir/nix.conf" 2>/dev/null; then
+  printf '\n%s\n' "$features" >> "$config_dir/nix.conf"
+fi
+current_version="$(nix --version | awk '{print $NF}')"
+if [[ "$(printf '%s\n' "$nix_version" "$current_version" | sort -V | head -n 1)" != "$nix_version" ]]; then
+  nix upgrade-nix --profile "$HOME/.nix-profile" \
+    --nix-store-paths-url "https://releases.nixos.org/nix/nix-$nix_version/fallback-paths.nix"
+fi
+nix --version
+echo "Nix ready in $((SECONDS - started))s"
+
+echo 'Caching the locked development environment'
+mkdir -p "$HOME/.cache/llm-setup"
+nix print-dev-env "$repo_root" --no-write-lock-file \
+  --profile "$HOME/.cache/llm-setup/dev-shell" >/dev/null
+
+marker='# llm-setup Nix development environment'
+if ! grep -Fqx "$marker" "$HOME/.bash_profile" 2>/dev/null; then
+  cat >> "$HOME/.bash_profile" <<EOF
+
+$marker
+if [[ -z "\${IN_NIX_SHELL:-}" && ( "\$PWD" == "$repo_root" || "\$PWD" == "$repo_root/"* ) ]]; then
+  export PATH="\$HOME/.nix-profile/bin:\$PATH"
+  eval "\$("\$HOME/.nix-profile/bin/nix" --extra-experimental-features 'nix-command flakes' print-dev-env "$repo_root" --no-write-lock-file)"
+fi
+EOF
+fi
+echo "Orb setup finished in $((SECONDS - started))s"

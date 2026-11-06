@@ -1,0 +1,17 @@
+{
+  "source_repository": "darwin67/llm-setup",
+  "migrate_from": {
+    "source_repository": "chaba-dev/llm-setup",
+    "source_commit": "b7d206cca8e32e25c1a112594d9666bb12cab85c"
+  },
+  "repositories": {
+    "user": {
+      "skills": {
+        "evaluating-llms": "amp/user/skills/evaluating-llms"
+      },
+      "plugins": {
+        "shopify": "amp/user/plugins/shopify"
+      }
+    }
+  }
+}

@@ -1,0 +1,1 @@
+Do not add Amp as a co-author in Git commits. Omit the Co-authored-by trailer for Amp in all projects.

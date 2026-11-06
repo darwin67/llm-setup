@@ -1,0 +1,48 @@
+{
+  "nodes": {
+    "amp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793830914,
+        "narHash": "sha256-wsvh97Db0EZtUlf7wsZcUht4uZ88pIQR5hYRdNniS8E=",
+        "owner": "darwin67",
+        "repo": "ampcode-nix",
+        "rev": "fb7d5e72edf23f7f66798a644ea5bcd8edf20a82",
+        "type": "github"
+      },
+      "original": {
+        "owner": "darwin67",
+        "repo": "ampcode-nix",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1793726008,
+        "narHash": "sha256-jQp1wKvbwWdLBASTXkSi/VYmDJ5AbBi1WvcMt9HWJC8=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "1d060086d60cb76a40cf37109f979d88a5bd6396",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "amp": "amp",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

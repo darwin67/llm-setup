@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+# Login shells already activate it. Direct invocations use only cached inputs.
+if [[ -z "${IN_NIX_SHELL:-}" ]]; then
+  export PATH="$HOME/.nix-profile/bin:$PATH"
+  environment="$(nix --extra-experimental-features 'nix-command flakes' print-dev-env \
+    "$repo_root" --no-write-lock-file --offline)"
+  eval "$environment"
+fi
+for tool in nix python git actionlint bun amp; do
+  command -v "$tool" >/dev/null
+done
+python -c 'import yaml'
+echo 'llm-setup toolchain ready'
